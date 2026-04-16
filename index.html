@@ -628,8 +628,6 @@ function svgSummary() { return `
 </svg>`; }
 
 /* ─────────────────────────────────────
-   DATOS DE LA PRESENTACIÓN (WAF)
-   * 15 Diapositivas en total *
 ───────────────────────────────────── */
 const SLIDES = [
   {
@@ -796,7 +794,7 @@ const SLIDES = [
   {
     type: 'summary',
     sidebarTitle: 'Conclusión',
-    eyebrow: 'resumen ejecutivo',
+    eyebrow: 'resumen final',
     h2: '14. WAF: Un componente Vital',
     lead: 'Idea clave: La seguridad web profunda ya no es opcional.',
     extraDesc: '<strong>Reflexión final:</strong> Un WAF es poderoso, pero no es magia. Debe complementarse con prácticas de código seguro (Tema 4.3).',
@@ -814,7 +812,6 @@ const SLIDES = [
 ];
 
 /* ─────────────────────────────────────
-   MOTOR DE RENDERIZADO 
 ───────────────────────────────────── */
 let cur = 0;
 const stage   = document.getElementById('stage');
