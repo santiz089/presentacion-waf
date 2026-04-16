@@ -1,0 +1,958 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Web Application Firewalls (WAF) | Tópicos Selectos de Programación Web</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,600;1,400&family=DM+Mono:wght@400;500;600&display=swap');
+
+*,*::before,*::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --ink: #0f0f13;
+  --ink2: #3a3a45;
+  --ink3: #6a6a7a;
+  
+  --purple: #6c5ce7;
+  --purple-l: #a29bfe;
+  --teal: #00b894;
+  --amber: #e17055;
+  --blue: #0984e3;
+  --neon-glow: 0 0 15px rgba(108, 92, 231, 0.6);
+
+  /* Efecto Cristal Optimizado */
+  --glass-card: rgba(255, 255, 255, 0.78);
+  --glass-surface: rgba(255, 255, 255, 0.65);
+  --glass-border: rgba(255, 255, 255, 0.9);
+  --glass-border-subtle: rgba(255, 255, 255, 0.5);
+  --glass-shadow: 0 12px 40px rgba(31, 38, 135, 0.2);
+}
+
+html, body { height: 100%; overflow: hidden; }
+
+body {
+  font-family: 'DM Sans', sans-serif;
+  color: var(--ink);
+  display: flex; justify-content: center; align-items: center;
+  min-height: 100vh;
+  padding: 20px;
+  
+/* FONDO ANIMADO GIF */
+background-color: #1a1a2e; 
+background-image: url('seguridad3.gif');
+
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+}
+
+.shell {
+  position: relative; z-index: 1;
+  width: 100%; max-width: 1280px; 
+  background: var(--glass-card);
+  backdrop-filter: blur(20px) saturate(1.5);
+  -webkit-backdrop-filter: blur(20px) saturate(1.5);
+  border-radius: 24px; border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
+  display: flex; flex-direction: column;
+  height: 85vh; 
+  min-height: 700px;
+  overflow: hidden;
+}
+
+/* ── LAYOUT PRINCIPAL ── */
+.body-wrapper { display: flex; flex: 1; overflow: hidden; }
+
+.sidebar {
+  width: 280px;
+  background: rgba(255, 255, 255, 0.25);
+  border-right: 1px solid var(--glass-border-subtle);
+  padding: 24px 16px;
+  display: flex; flex-direction: column; gap: 8px;
+  overflow-y: auto; flex-shrink: 0;
+}
+.sidebar::-webkit-scrollbar { width: 6px; }
+.sidebar::-webkit-scrollbar-thumb { background: rgba(108, 92, 231, 0.3); border-radius: 10px; }
+
+.sidebar-title {
+  font-family: 'DM Mono', monospace;
+  font-size: 11px; letter-spacing: 2px;
+  color: var(--purple); font-weight: 600;
+  text-transform: uppercase; margin-bottom: 12px; padding-left: 12px;
+}
+.sb-item {
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px 14px; border-radius: 12px;
+  cursor: pointer; transition: all 0.3s ease;
+  color: var(--ink3); font-weight: 500; font-size: 13.5px;
+  border-left: 3px solid transparent;
+}
+.sb-item:hover { background: rgba(255, 255, 255, 0.6); }
+.sb-item.active {
+  background: rgba(255, 255, 255, 0.9); color: var(--purple);
+  box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+  border-left: 3px solid var(--purple); font-weight: 600;
+}
+.sb-num {
+  font-family: 'DM Mono', monospace; font-size: 11px; opacity: 0.6; font-weight: 600;
+  background: rgba(0,0,0,0.05); padding: 4px 6px; border-radius: 6px;
+}
+.sb-item.active .sb-num { opacity: 1; background: var(--purple-l); color: white; box-shadow: var(--neon-glow); }
+
+.main-content { display: flex; flex-direction: column; flex: 1; position: relative; overflow: hidden; }
+
+.hdr {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 32px; border-bottom: 1px solid var(--glass-border-subtle);
+  background: rgba(255, 255, 255, 0.15); flex-shrink: 0;
+}
+.slide-id { font-family: 'DM Mono', monospace; font-size: 13px; color: var(--ink2); font-weight: 600; }
+
+.stage { flex: 1; position: relative; overflow: hidden; perspective: 1200px; }
+
+.slide { 
+  position: absolute; inset: 0; display: flex; flex-direction: column; 
+  padding: 32px 40px; opacity: 0; pointer-events: none; overflow-y: auto; 
+}
+.slide::-webkit-scrollbar { width: 6px; }
+.slide::-webkit-scrollbar-thumb { background: rgba(0, 184, 148, 0.3); border-radius: 10px; }
+.slide.active { opacity: 1; pointer-events: all; }
+
+/* ── TRANSICIONES MEJORADAS ── */
+.trans-slideX { transition: opacity 0.5s ease, transform 0.6s cubic-bezier(0.25, 1, 0.5, 1); }
+.trans-slideX.init-next { transform: translateX(80px); }
+.trans-slideX.init-prev { transform: translateX(-80px); }
+.trans-slideX.active { transform: translateX(0); }
+.trans-slideX.out-next { transform: translateX(-80px); opacity: 0; }
+.trans-slideX.out-prev { transform: translateX(80px); opacity: 0; }
+
+.trans-slideY { transition: opacity 0.5s ease, transform 0.6s cubic-bezier(0.25, 1, 0.5, 1); }
+.trans-slideY.init-next { transform: translateY(-80px); }
+.trans-slideY.init-prev { transform: translateY(80px); }
+.trans-slideY.active { transform: translateY(0); }
+.trans-slideY.out-next { transform: translateY(80px); opacity: 0; }
+.trans-slideY.out-prev { transform: translateY(-80px); opacity: 0; }
+
+.trans-shatter { transition: opacity 0.6s ease, transform 0.6s cubic-bezier(0.3, -0.3, 0.2, 1.5), filter 0.6s ease; }
+.trans-shatter.init-next { transform: scale(1.1) rotate(2deg); filter: blur(10px); }
+.trans-shatter.init-prev { transform: scale(0.9) rotate(-2deg); filter: blur(10px); }
+.trans-shatter.active { transform: scale(1) rotate(0deg); filter: blur(0px); }
+.trans-shatter.out-next { transform: scale(0.9) rotate(-2deg); filter: blur(10px); opacity: 0; }
+.trans-shatter.out-prev { transform: scale(1.1) rotate(2deg); filter: blur(10px); opacity: 0; }
+
+/* ── TIPOGRAFÍA Y CAJAS ── */
+.eyebrow { font-family: 'DM Mono', monospace; font-size: 12px; letter-spacing: 2px; text-transform: uppercase; color: var(--purple); margin-bottom: 8px; font-weight: 600; }
+.h1 { font-size: 42px; font-weight: 600; line-height: 1.15; margin-bottom: 12px; color: var(--ink); letter-spacing: -0.5px;}
+.h2 { font-size: 28px; font-weight: 600; margin-bottom: 8px; color: var(--ink); letter-spacing: -0.5px;}
+.lead { font-size: 16px; color: var(--ink2); line-height: 1.5; font-weight: 600; margin-bottom: 10px;}
+
+.extra-info {
+  background: rgba(255, 255, 255, 0.5); border-left: 3px solid var(--teal);
+  padding: 12px 16px; border-radius: 0 10px 10px 0;
+  font-size: 14px; color: var(--ink2); line-height: 1.6;
+  margin-bottom: 16px; box-shadow: 0 2px 10px rgba(0,0,0,0.02);
+}
+.extra-info strong { color: var(--teal); }
+
+.example-box {
+  background: rgba(255, 255, 255, 0.85); border-left: 4px solid var(--purple);
+  border-radius: 6px 12px 12px 6px; padding: 16px; margin-top: 5px;
+  color: var(--ink); font-size: 14px; line-height: 1.6;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+  transform: translateX(-20px); opacity: 0; transition: transform 0.4s ease, opacity 0.4s ease;
+}
+.example-box.in { transform: none; opacity: 1; }
+.example-title { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: var(--purple); font-weight: 600; margin-bottom: 6px; }
+
+.two { display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 24px; flex: 1; align-items: start; }
+.col-l { display: flex; flex-direction: column; gap: 10px; height: 100%;}
+
+.item {
+  padding: 12px 16px; border-radius: 12px; border: 1px solid var(--glass-border-subtle);
+  background: var(--glass-surface); backdrop-filter: blur(8px);
+  display: flex; gap: 12px; align-items: flex-start;
+  transform: translateX(-20px); opacity: 0;
+  transition: transform 0.35s ease, opacity 0.35s ease, background 0.3s, box-shadow 0.3s;
+}
+.item.in { transform: none; opacity: 1; }
+.item:hover { background: rgba(255, 255, 255, 0.95); box-shadow: 0 6px 20px rgba(0,0,0,0.08); transform: translateY(-2px); }
+.ico { width: 38px; height: 38px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; background: rgba(255,255,255,0.6); }
+.lbl { font-size: 15px; font-weight: 600; margin-bottom: 2px; color: var(--ink); }
+.desc { font-size: 13px; color: var(--ink2); line-height: 1.4; }
+
+.anim-box {
+  border-radius: 16px; border: 1px solid var(--glass-border);
+  background: rgba(255, 255, 255, 0.45); backdrop-filter: blur(12px);
+  overflow: hidden; position: relative; display: flex; align-items: center; justify-content: center;
+  height: 100%; min-height: 300px; padding: 20px; box-shadow: inset 0 0 20px rgba(255,255,255,0.4);
+}
+
+.title-grid { display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 20px; align-items: start; margin-top: 10px; flex: 1; }
+.title-left { display: flex; flex-direction: column; }
+.accent-bar { width: 60px; height: 4px; border-radius: 2px; background: linear-gradient(90deg, var(--purple), var(--teal)); margin-bottom: 16px; box-shadow: var(--neon-glow); }
+.chip-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.chip { font-size: 12px; padding: 6px 14px; border-radius: 50px; border: 1px solid rgba(108, 92, 231, 0.4); color: var(--ink); font-weight: 600; background: rgba(255, 255, 255, 0.7); animation: chip-in 0.5s ease both; }
+@keyframes chip-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+.integrantes-card { background: rgba(255, 255, 255, 0.9); border: 1px solid var(--glass-border); border-radius: 16px; padding: 20px; box-shadow: 0 8px 25px rgba(0,0,0,0.08); margin-top: 20px;}
+.int-eyebrow { font-family: 'DM Mono', monospace; font-size: 12px; letter-spacing: 2px; text-transform: uppercase; color: var(--purple); margin-bottom: 14px; font-weight: 600; }
+.int-item { display: flex; align-items: center; gap: 10px; font-size: 14.5px; font-weight: 600; color: var(--ink); padding: 8px 0; border-bottom: 1px solid rgba(0,0,0,0.05); }
+.int-item:last-child { border-bottom: none; }
+.int-dot { width: 8px; height: 8px; border-radius: 50%; background: linear-gradient(135deg, var(--purple), var(--teal)); flex-shrink: 0; }
+
+.sum-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; flex: 1; align-content: start; margin-top: 10px; }
+.sum-card { padding: 18px; border-radius: 14px; border: 1px solid var(--glass-border-subtle); background: var(--glass-surface); backdrop-filter: blur(8px); opacity: 0; transform: translateY(15px); transition: opacity 0.3s ease, transform 0.3s ease, background 0.3s; }
+.sum-card:hover { background: rgba(255,255,255,0.95); box-shadow: 0 4px 15px rgba(0,0,0,0.05); transform: translateY(-3px);}
+.sum-card.in { opacity: 1; transform: none; }
+.sum-ico { width: 36px; height: 36px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 18px; margin-bottom: 8px; background: rgba(255,255,255,0.6);}
+.sum-title { font-size: 15px; font-weight: 600; color: var(--ink); margin-bottom: 6px; }
+.sum-desc { font-size: 13px; color: var(--ink2); line-height: 1.5; }
+
+.ftr { display: flex; align-items: center; justify-content: space-between; padding: 14px 32px; border-top: 1px solid var(--glass-border-subtle); background: rgba(255, 255, 255, 0.3); flex-shrink: 0; }
+.btn { background: rgba(255, 255, 255, 0.9); border: 1px solid rgba(108, 92, 231, 0.4); color: var(--ink); padding: 10px 24px; border-radius: 50px; cursor: pointer; font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 600; transition: all 0.25s; }
+.btn:hover:not(:disabled) { background: var(--purple); color: #fff; border-color: var(--purple); box-shadow: 0 4px 15px rgba(108,92,231,0.4); transform: translateY(-1px); }
+.btn:disabled { opacity: 0.5; cursor: default; background: rgba(255,255,255,0.5); }
+.kbd-hint { font-size: 12px; color: var(--ink3); font-weight: 500; }
+</style>
+</head>
+<body>
+
+<div class="shell">
+  <div class="body-wrapper">
+    <div class="sidebar" id="sidebar"></div>
+    <div class="main-content">
+      <div class="hdr">
+        <span style="font-weight:600; color:var(--ink2); font-size: 14px;">Seguridad Capa 7 (WAF)</span>
+        <span class="slide-id" id="sid">01 / 15</span>
+      </div>
+      <div class="stage" id="stage"></div>
+      <div class="ftr">
+        <button class="btn" id="prev" onclick="nav(-1)" disabled>← Anterior</button>
+        <span class="kbd-hint">← → teclado · swipe táctil</span>
+        <button class="btn" id="next" onclick="nav(1)">Siguiente →</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ─────────────────────────────────────
+   FUNCIONES SVG - VERSIÓN CYBER-PRO (MEJORADAS)
+───────────────────────────────────── */
+function getDefs() {
+  return `
+  <defs>
+    <filter id="neonGlow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="3" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+    <filter id="alertGlow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="4" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+  </defs>`;
+}
+
+function svgTitle() { return `
+<svg viewBox="0 0 300 190" width="100%" style="max-height:220px; overflow:visible;">
+  <defs>
+    <linearGradient id="shieldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#6c5ce7"/><stop offset="100%" stop-color="#00b894"/>
+    </linearGradient>
+    <pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse">
+      <path d="M 20 0 L 0 0 0 20" fill="none" stroke="#a29bfe" stroke-width="0.5" opacity="0.3"/>
+    </pattern>
+    <filter id="glowTitle"><feGaussianBlur stdDeviation="2" result="coloredBlur"/><feMerge><feMergeNode in="coloredBlur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+  </defs>
+  <rect width="100%" height="100%" fill="url(#grid)" />
+  ${[20,70,120,170,220,270].map((x,i) => `
+    <circle cx="${x}" cy="${Math.random()*190}" r="2" fill="#00b894" filter="url(#glowTitle)">
+      <animate attributeName="opacity" values="0;1;0" dur="${1.5 + Math.random()}s" repeatCount="indefinite"/>
+      <animate attributeName="cy" values="${Math.random()*190}; ${Math.random()*190 - 20}" dur="${2 + Math.random()}s" repeatCount="indefinite"/>
+    </circle>
+  `).join('')}
+  <g>
+    <animateTransform attributeName="transform" type="translate" values="0,3; 0,-3; 0,3" dur="4s" repeatCount="indefinite" ease-in-out/>
+    <path d="M 150 10 L 230 40 L 230 110 C 230 160 150 185 150 185 C 150 185 70 160 70 110 L 70 40 Z" fill="none" stroke="url(#shieldGrad)" stroke-width="8" opacity="0.4" filter="url(#glowTitle)">
+      <animate attributeName="stroke-width" values="8; 12; 8" dur="2s" repeatCount="indefinite"/>
+    </path>
+    <path d="M 150 20 L 210 45 L 210 105 C 210 145 150 170 150 170 C 150 170 90 145 90 105 L 90 45 Z" fill="rgba(255,255,255,0.9)" stroke="#6c5ce7" stroke-width="3"/>
+    <text x="150" y="105" text-anchor="middle" font-family="DM Mono" font-size="28" font-weight="600" fill="#6c5ce7">WAF</text>
+  </g>
+  <circle cx="150" cy="95" r="90" fill="none" stroke="#00b894" stroke-width="1.5" stroke-dasharray="10 20 40 10" filter="url(#glowTitle)">
+    <animateTransform attributeName="transform" type="rotate" values="0 150 95; 360 150 95" dur="10s" repeatCount="indefinite" linear/>
+  </circle>
+</svg>`; }
+
+function svgWafCycle() { return `
+<svg viewBox="0 0 280 200" width="100%" style="max-height:240px">
+  ${getDefs()}
+  <polygon points="140,75 165,90 165,115 140,130 115,115 115,90" fill="#6c5ce7" filter="url(#neonGlow)">
+    <animate attributeName="opacity" values="0.8; 1; 0.8" dur="2s" repeatCount="indefinite"/>
+  </polygon>
+  <text x="140" y="105" text-anchor="middle" font-family="DM Mono" font-size="10" fill="white" font-weight="600">L7 ENGINE</text>
+  ${[32,68,132,168,132,68].map((y,i) => {
+    const x = [140,207,207,140,73,73][i];
+    return `
+      <line x1="${x}" y1="${y}" x2="140" y2="100" stroke="#a29bfe" stroke-width="2" opacity="0.4"/>
+      <circle cx="140" cy="100" r="4" fill="#00b894" filter="url(#neonGlow)">
+        <animate attributeName="cx" values="${x}; 140" dur="1.5s" begin="${i * 0.3}s" repeatCount="indefinite"/>
+        <animate attributeName="cy" values="${y}; 100" dur="1.5s" begin="${i * 0.3}s" repeatCount="indefinite"/>
+        <animate attributeName="opacity" values="1; 0" dur="1.5s" begin="${i * 0.3}s" repeatCount="indefinite"/>
+      </circle>
+    `;
+  }).join('')}
+  ${[
+    {x:140,y:32,l:'Detección', col:'#6c5ce7',bg:'#ede9fe', ico:'🔍'},
+    {x:207,y:68,l:'Bloqueo',  col:'#0984e3',bg:'#dff0ff', ico:'🚫'},
+    {x:207,y:132,l:'Filtrado',col:'#00b894',bg:'#d1faf0', ico:'⚙️'},
+    {x:140,y:168,l:'Registro',   col:'#e17055',bg:'#fde8e3', ico:'📝'},
+    {x:73, y:132,l:'Alerta', col:'#6c5ce7',bg:'#ede9fe', ico:'🔔'},
+    {x:73, y:68, l:'Machine L.', col:'#00b894',bg:'#d1faf0', ico:'🤖'},
+  ].map(n=>`
+  <g>
+    <circle cx="${n.x}" cy="${n.y}" r="22" fill="${n.bg}" stroke="${n.col}" stroke-width="2">
+      <animate attributeName="stroke-dasharray" values="0 150; 150 0" dur="4s" repeatCount="indefinite"/>
+    </circle>
+    <text x="${n.x}" y="${n.y+4}" text-anchor="middle" font-size="12">${n.ico}</text>
+    <text x="${n.x}" y="${n.y+34}" text-anchor="middle" font-family="DM Sans" font-size="9" font-weight="600" fill="${n.col}">${n.l}</text>
+  </g>`).join('')}
+</svg>`; }
+
+function svgSanitize() { return `
+<svg viewBox="0 0 300 195" width="100%" style="max-height:240px">
+  ${getDefs()}
+  <path d="M 150 20 L 190 20 L 190 170 L 150 170 Z" fill="#6c5ce7" rx="5" filter="url(#neonGlow)"/>
+  <text x="170" y="15" text-anchor="middle" font-family="DM Mono" font-size="11" fill="#6c5ce7" font-weight="600">Sanitizer</text>
+
+  <g>
+    <animateTransform attributeName="transform" type="translate" values="-80,0; 40,0; 40,0" keyTimes="0; 0.4; 1" dur="3s" repeatCount="indefinite"/>
+    <rect x="10" y="80" width="115" height="30" rx="4" fill="#1e1e24" stroke="#e17055" stroke-width="2"/>
+    <text x="67" y="100" text-anchor="middle" font-family="DM Mono" font-size="11" fill="#e17055" font-weight="600">DROP TABLE users;</text>
+    <animate attributeName="opacity" values="1; 1; 0; 0" keyTimes="0; 0.45; 0.5; 1" dur="3s" repeatCount="indefinite"/>
+  </g>
+
+  <line x1="150" y1="20" x2="150" y2="170" stroke="#00b894" stroke-width="4" filter="url(#neonGlow)">
+    <animate attributeName="stroke" values="#00b894; #e17055; #00b894" keyTimes="0; 0.4; 1" dur="3s" repeatCount="indefinite"/>
+    <animate attributeName="stroke-width" values="4; 12; 4" keyTimes="0; 0.4; 1" dur="3s" repeatCount="indefinite"/>
+  </line>
+
+  <g transform="translate(145, 95)">
+    <circle cx="0" cy="0" r="0" fill="none" stroke="#e17055" stroke-width="4" filter="url(#alertGlow)">
+      <animate attributeName="r" values="0; 60; 60" keyTimes="0; 0.15; 1" begin="1.2s" dur="3s" repeatCount="indefinite"/>
+      <animate attributeName="opacity" values="1; 0; 0" keyTimes="0; 0.15; 1" begin="1.2s" dur="3s" repeatCount="indefinite"/>
+    </circle>
+  </g>
+</svg>`; }
+
+function svgSurface() { return `
+<svg viewBox="0 0 280 195" width="100%" style="max-height:240px">
+  ${getDefs()}
+  <path d="M 20 100 Q 20 80 40 80 Q 50 60 70 60 Q 100 60 100 85 Q 120 85 120 105 Q 120 120 100 120 L 30 120 Q 10 120 20 100" fill="#dff0ff" stroke="#0984e3" stroke-width="2"/>
+  <text x="70" y="100" text-anchor="middle" font-family="DM Sans" font-size="12" font-weight="600" fill="#0984e3">WAN</text>
+  
+  <g>
+    <rect x="145" y="30" width="16" height="130" rx="8" fill="#6c5ce7" filter="url(#neonGlow)"/>
+    <line x1="153" y1="35" x2="153" y2="155" stroke="#fff" stroke-width="2" stroke-dasharray="4 4"/>
+    <text x="153" y="20" text-anchor="middle" font-family="DM Mono" font-size="12" font-weight="600" fill="#6c5ce7">WAF Proxy</text>
+  </g>
+
+  <g transform="translate(210, 60)">
+    <rect x="0" y="0" width="50" height="70" rx="4" fill="#3a3a45" stroke="#a29bfe" stroke-width="2"/>
+    <line x1="10" y1="15" x2="40" y2="15" stroke="#00b894" stroke-width="4"/>
+    <line x1="10" y1="35" x2="40" y2="35" stroke="#00b894" stroke-width="4"/>
+    <circle cx="40" cy="15" r="2" fill="#fff"><animate attributeName="opacity" values="0;1;0" dur="0.5s" repeatCount="indefinite"/></circle>
+    <text x="25" y="-10" text-anchor="middle" font-family="DM Mono" font-size="10" fill="#3a3a45" font-weight="600">App Server</text>
+  </g>
+
+  <g>
+    <animateTransform attributeName="transform" type="translate" values="100,0; 135,0; 100,0; 100,0" keyTimes="0; 0.3; 0.6; 1" dur="2s" repeatCount="indefinite"/>
+    <circle cx="0" cy="80" r="6" fill="#e17055" filter="url(#alertGlow)"/>
+    <path d="M -4 76 L 4 84 M -4 84 L 4 76" stroke="white" stroke-width="2"/>
+    <animate attributeName="opacity" values="1; 1; 0; 0" keyTimes="0; 0.3; 0.6; 1" dur="2s" repeatCount="indefinite"/>
+  </g>
+  <g>
+    <animateTransform attributeName="transform" type="translate" values="100,0; 210,0" dur="2s" begin="0.5s" repeatCount="indefinite"/>
+    <circle cx="0" cy="110" r="6" fill="#00b894" filter="url(#neonGlow)"/>
+    <text x="0" y="113" text-anchor="middle" font-size="8" fill="white">✓</text>
+    <animate attributeName="opacity" values="1; 1; 0" keyTimes="0; 0.8; 1" dur="2s" begin="0.5s" repeatCount="indefinite"/>
+  </g>
+</svg>`; }
+
+function svgAccessControl() { return `
+<svg viewBox="0 0 280 200" width="100%" style="max-height:240px">
+  ${getDefs()}
+  <rect x="60" y="40" width="160" height="120" rx="6" fill="#1e1e24" stroke="#3a3a45" stroke-width="2"/>
+  <rect x="75" y="55" width="100" height="8" rx="4" fill="#a29bfe" opacity="0.5"/>
+  <rect x="75" y="75" width="130" height="8" rx="4" fill="#a29bfe" opacity="0.5"/>
+  <rect x="75" y="115" width="110" height="8" rx="4" fill="#e17055" filter="url(#alertGlow)"/>
+  <rect x="75" y="135" width="90" height="8" rx="4" fill="#a29bfe" opacity="0.5"/>
+
+  <g>
+    <animateTransform attributeName="transform" type="translate" values="50,45; 50,135; 50,45" dur="4s" repeatCount="indefinite" ease-in-out/>
+    <polygon points="100,20 180,40 180,-40" fill="rgba(0,184,148,0.15)">
+      <animate attributeName="fill" values="rgba(0,184,148,0.15); rgba(225,112,85,0.3); rgba(0,184,148,0.15)" keyTimes="0; 0.5; 1" dur="4s" repeatCount="indefinite"/>
+    </polygon>
+    <line x1="100" y1="-10" x2="100" y2="10" stroke="#00b894" stroke-width="2" filter="url(#neonGlow)"/>
+    <line x1="90" y1="0" x2="110" y2="0" stroke="#00b894" stroke-width="2" filter="url(#neonGlow)"/>
+  </g>
+</svg>`; }
+
+function svgCrypto() { return `
+<svg viewBox="0 0 300 200" width="100%" style="max-height:240px">
+  ${getDefs()}
+  <rect x="20" y="85" width="260" height="30" fill="none" stroke="#6c5ce7" stroke-width="2" stroke-dasharray="5 5" rx="15"/>
+  <g>
+    <animateTransform attributeName="transform" type="translate" values="0,0; 100,0; 100,0" keyTimes="0; 0.4; 1" dur="4s" repeatCount="indefinite"/>
+    <rect x="30" y="90" width="20" height="20" rx="3" fill="#3a3a45"/>
+    <text x="40" y="104" text-anchor="middle" font-size="10">🔒</text>
+    <animate attributeName="opacity" values="1; 1; 0; 0" keyTimes="0; 0.38; 0.4; 1" dur="4s" repeatCount="indefinite"/>
+  </g>
+  <circle cx="150" cy="100" r="45" fill="#ede9fe" stroke="#6c5ce7" stroke-width="4" filter="url(#neonGlow)"/>
+  <g transform="translate(150, 100)">
+    <circle cx="0" cy="0" r="30" fill="none" stroke="#00b894" stroke-width="3" stroke-dasharray="10 10">
+      <animateTransform attributeName="transform" type="rotate" values="0; 180; 180" keyTimes="0; 0.4; 1" dur="4s" repeatCount="indefinite"/>
+    </circle>
+    <text x="0" y="8" text-anchor="middle" font-size="24">
+      <animate attributeName="opacity" values="0; 1; 0" keyTimes="0; 0.4; 1" dur="4s" repeatCount="indefinite"/>
+      🔓
+    </text>
+  </g>
+  <g opacity="0">
+    <animateTransform attributeName="transform" type="translate" values="130,0; 250,0" keyTimes="0; 1" dur="2s" begin="2s" repeatCount="indefinite"/>
+    <rect x="20" y="90" width="20" height="20" rx="3" fill="#00b894"/>
+    <text x="30" y="104" text-anchor="middle" font-size="10">🔒</text>
+    <animate attributeName="opacity" values="0; 1; 1; 0" keyTimes="0; 0.1; 0.9; 1" dur="2s" begin="2s" repeatCount="indefinite"/>
+  </g>
+  <text x="150" y="45" text-anchor="middle" font-family="DM Mono" font-size="12" fill="#6c5ce7" font-weight="600">TLS Termination</text>
+</svg>`; }
+
+function svgPatches() { return `
+<svg viewBox="0 0 280 200" width="100%" style="max-height:240px">
+  ${getDefs()}
+  <rect x="60" y="60" width="160" height="80" rx="8" fill="#1e1e24" stroke="#3a3a45" stroke-width="3"/>
+  <path d="M 120 60 L 130 90 L 115 100 L 140 140" fill="none" stroke="#e17055" stroke-width="4" filter="url(#alertGlow)">
+    <animate attributeName="opacity" values="1; 0.2; 1" dur="0.2s" repeatCount="indefinite"/>
+  </path>
+  <text x="160" y="105" text-anchor="middle" font-family="DM Mono" font-size="12" fill="#e17055">CVE-2026-XXXX</text>
+  <g>
+    <animateTransform attributeName="transform" type="translate" values="0,-80; 0,0; 0,0; 0,-80" keyTimes="0; 0.2; 0.8; 1" dur="5s" repeatCount="indefinite"/>
+    <rect x="50" y="50" width="180" height="100" rx="12" fill="rgba(0,184,148,0.2)" stroke="#00b894" stroke-width="3" filter="url(#neonGlow)"/>
+    <rect x="90" y="38" width="100" height="24" rx="12" fill="#00b894"/>
+    <text x="140" y="54" text-anchor="middle" font-family="DM Mono" font-size="11" fill="white" font-weight="600">VIRTUAL PATCH ACTIVO</text>
+    <animate attributeName="opacity" values="0; 1; 1; 0" keyTimes="0; 0.1; 0.9; 1" dur="5s" repeatCount="indefinite"/>
+  </g>
+</svg>`; }
+
+function svgSession() { return `
+<svg viewBox="0 0 300 200" width="100%" style="max-height:240px">
+  ${getDefs()}
+  <polygon points="150,60 185,80 185,120 150,140 115,120 115,80" fill="#1e1e24" stroke="#6c5ce7" stroke-width="3" filter="url(#neonGlow)"/>
+  <text x="150" y="105" text-anchor="middle" font-family="DM Mono" font-size="12" fill="#a29bfe" font-weight="600">JSESSIONID</text>
+  <g>
+    <animateTransform attributeName="transform" type="rotate" values="0 150 100; 360 150 100" dur="8s" repeatCount="indefinite" linear/>
+    <circle cx="150" cy="100" r="60" fill="none" stroke="#00b894" stroke-width="1" stroke-dasharray="5 15"/>
+    <g transform="translate(150, 40)"><circle cx="0" cy="0" r="14" fill="#00b894"/><text x="0" y="4" text-anchor="middle" font-size="10">👁️</text></g>
+    <g transform="translate(100, 130)"><circle cx="0" cy="0" r="14" fill="#0984e3"/><text x="0" y="4" text-anchor="middle" font-size="10">🔒</text></g>
+    <g transform="translate(200, 130)"><circle cx="0" cy="0" r="14" fill="#6c5ce7"/><text x="0" y="4" text-anchor="middle" font-size="10">🛡️</text></g>
+  </g>
+</svg>`; }
+
+function svgMonitor() { return `
+<svg viewBox="0 0 300 200" width="100%" style="max-height:240px">
+  ${getDefs()}
+  <rect x="20" y="20" width="260" height="150" rx="8" fill="#111" stroke="#333" stroke-width="3"/>
+  <path d="M 20 60 L 280 60 M 20 100 L 280 100 M 20 140 L 280 140" fill="none" stroke="#222" stroke-width="1"/>
+  <path d="M 20 100 L 60 100 L 70 80 L 80 120 L 90 100 L 120 100 L 130 50 L 140 150 L 150 100 L 180 100 L 190 90 L 200 110 L 210 100 L 280 100" fill="none" stroke="#00b894" stroke-width="3" filter="url(#neonGlow)">
+    <animate attributeName="stroke" values="#00b894; #00b894; #e17055; #e17055; #00b894" keyTimes="0; 0.4; 0.45; 0.6; 0.65" dur="4s" repeatCount="indefinite"/>
+  </path>
+  <rect x="20" y="20" width="10" height="150" fill="#00b894" opacity="0.2">
+    <animate attributeName="x" values="20; 270; 20" dur="4s" repeatCount="indefinite" ease-in-out/>
+  </rect>
+  <g>
+    <animate attributeName="opacity" values="0; 0; 1; 1; 0" keyTimes="0; 0.45; 0.5; 0.8; 0.85" dur="4s" repeatCount="indefinite"/>
+    <rect x="90" y="30" width="120" height="40" rx="4" fill="rgba(225,112,85,0.9)" stroke="#fff" stroke-width="1" filter="url(#alertGlow)"/>
+    <text x="150" y="48" text-anchor="middle" font-family="DM Mono" font-size="10" fill="white" font-weight="600">ANOMALÍA DETECTADA</text>
+    <text x="150" y="62" text-anchor="middle" font-family="DM Mono" font-size="9" fill="white">IP: 192.168.X.X Bloqueada</text>
+  </g>
+</svg>`; }
+
+/* ── NUEVAS FUNCIONES SVG (LAS 5 DIAPOSITIVAS EXTRA) ── */
+function svgCompare() { return `
+<svg viewBox="0 0 300 200" width="100%" style="max-height:240px">
+  ${getDefs()}
+  <rect x="20" y="40" width="50" height="30" rx="4" fill="#3a3a45" stroke="#a29bfe"/>
+  <text x="45" y="58" text-anchor="middle" font-family="DM Mono" font-size="10" fill="white">Port 80</text>
+  <line x1="70" y1="55" x2="160" y2="55" stroke="#e17055" stroke-width="4" stroke-dasharray="5 5">
+    <animate attributeName="stroke-dashoffset" values="20;0" dur="1s" repeatCount="indefinite" linear/>
+  </line>
+  <rect x="160" y="30" width="20" height="50" fill="#e17055" rx="3" filter="url(#alertGlow)"/>
+  <text x="170" y="20" text-anchor="middle" font-family="DM Sans" font-size="9" fill="#e17055" font-weight="600">Firewall L4 (Bloqueado)</text>
+  
+  <rect x="20" y="120" width="50" height="30" rx="4" fill="#3a3a45" stroke="#00b894"/>
+  <text x="45" y="138" text-anchor="middle" font-family="DM Mono" font-size="10" fill="white">HTTP GET</text>
+  <line x1="70" y1="135" x2="230" y2="135" stroke="#00b894" stroke-width="4" stroke-dasharray="5 5">
+    <animate attributeName="stroke-dashoffset" values="20;0" dur="1s" repeatCount="indefinite" linear/>
+  </line>
+  <rect x="160" y="110" width="20" height="50" fill="rgba(255,255,255,0.2)" stroke="#a29bfe" rx="3"/>
+  <text x="170" y="175" text-anchor="middle" font-family="DM Sans" font-size="9" fill="#a29bfe">FW L4 (Permite)</text>
+  <path d="M 230 110 L 240 135 L 230 160" fill="none" stroke="#6c5ce7" stroke-width="6" stroke-linecap="round" filter="url(#neonGlow)"/>
+  <circle cx="230" cy="135" r="15" fill="rgba(108,92,231,0.2)"/>
+  <text x="260" y="138" font-size="14">🛡️</text>
+</svg>`; }
+
+function svgModels() { return `
+<svg viewBox="0 0 300 200" width="100%" style="max-height:240px">
+  ${getDefs()}
+  <polygon points="100,30 200,30 170,160 130,160" fill="rgba(255,255,255,0.1)" stroke="#a29bfe" stroke-width="2"/>
+  
+  <g>
+    <circle cx="150" cy="10" r="5" fill="#00b894" filter="url(#neonGlow)">
+      <animate attributeName="cy" values="10; 180" dur="2s" repeatCount="indefinite"/>
+      <animate attributeName="opacity" values="1; 1; 0" keyTimes="0; 0.8; 1" dur="2s" repeatCount="indefinite"/>
+    </circle>
+    <circle cx="130" cy="-20" r="6" fill="#e17055" filter="url(#alertGlow)">
+      <animate attributeName="cy" values="-20; 80; 80" keyTimes="0; 0.5; 1" dur="2.5s" repeatCount="indefinite"/>
+      <animate attributeName="opacity" values="1; 1; 0" keyTimes="0; 0.45; 0.5" dur="2.5s" repeatCount="indefinite"/>
+      <animate attributeName="r" values="6; 10; 0" keyTimes="0; 0.45; 0.5" dur="2.5s" repeatCount="indefinite"/>
+    </circle>
+    <circle cx="170" cy="-40" r="5" fill="#00b894" filter="url(#neonGlow)">
+      <animate attributeName="cy" values="-40; 180" dur="2.2s" repeatCount="indefinite"/>
+    </circle>
+  </g>
+  
+  <line x1="120" y1="80" x2="180" y2="80" stroke="#6c5ce7" stroke-width="4" stroke-dasharray="10 5">
+    <animate attributeName="stroke-dashoffset" values="15;0" dur="1s" repeatCount="indefinite" linear/>
+  </line>
+  <text x="210" y="83" font-family="DM Sans" font-size="10" fill="#6c5ce7" font-weight="600">Reglas Lógicas</text>
+  
+  <rect x="130" y="165" width="40" height="20" rx="4" fill="#00b894"/>
+  <text x="150" y="178" text-anchor="middle" font-size="10" fill="white">APP</text>
+</svg>`; }
+
+function svgBypass() { return `
+<svg viewBox="0 0 300 200" width="100%" style="max-height:240px">
+  ${getDefs()}
+  <rect x="130" y="40" width="40" height="120" rx="6" fill="rgba(108,92,231,0.1)" stroke="#6c5ce7" stroke-width="2"/>
+  <text x="150" y="30" text-anchor="middle" font-family="DM Mono" font-size="10" fill="#6c5ce7" font-weight="600">WAF Scanner</text>
+
+  <g>
+    <animateTransform attributeName="transform" type="translate" values="0,80; 250,80" dur="4s" repeatCount="indefinite"/>
+    <rect x="0" y="0" width="80" height="24" rx="4" fill="#1e1e24" stroke="#e17055"/>
+    <text x="40" y="16" text-anchor="middle" font-family="DM Mono" font-size="11" fill="#e17055" font-weight="600">
+      <animate attributeName="opacity" values="1;0;0;1" keyTimes="0;0.3;0.6;1" dur="4s" repeatCount="indefinite"/>
+      &lt;script&gt;
+    </text>
+    <text x="40" y="16" text-anchor="middle" font-family="DM Mono" font-size="11" fill="#00b894" font-weight="600" opacity="0">
+      <animate attributeName="opacity" values="0;1;1;0" keyTimes="0;0.3;0.6;1" dur="4s" repeatCount="indefinite"/>
+      %3Cscript%3E
+    </text>
+  </g>
+  <path d="M 150 40 L 150 160" stroke="#00b894" stroke-width="2" filter="url(#neonGlow)">
+    <animate attributeName="opacity" values="0.2; 1; 0.2" dur="0.5s" repeatCount="indefinite"/>
+  </path>
+</svg>`; }
+
+function svgAction() { return `
+<svg viewBox="0 0 300 200" width="100%" style="max-height:240px">
+  ${getDefs()}
+  <circle cx="40" cy="100" r="18" fill="#1e1e24" stroke="#e17055" stroke-width="2"/>
+  <text x="40" y="105" text-anchor="middle" font-size="16">🤖</text>
+  <text x="40" y="130" text-anchor="middle" font-family="DM Mono" font-size="9" fill="#e17055">Spam Bot</text>
+
+  <line x1="60" y1="100" x2="140" y2="100" stroke="#e17055" stroke-width="3" stroke-dasharray="4 4">
+    <animate attributeName="stroke-dashoffset" values="8;0" dur="0.5s" repeatCount="indefinite" linear/>
+  </line>
+
+  <rect x="140" y="70" width="20" height="60" rx="4" fill="#6c5ce7" filter="url(#neonGlow)"/>
+
+  <path d="M 160 100 Q 220 100 220 50" fill="none" stroke="#0984e3" stroke-width="3" stroke-dasharray="4 4">
+    <animate attributeName="stroke-dashoffset" values="8;0" dur="0.5s" repeatCount="indefinite" linear/>
+  </path>
+  <rect x="180" y="20" width="80" height="30" rx="4" fill="white" stroke="#0984e3" stroke-width="2"/>
+  <text x="220" y="38" text-anchor="middle" font-family="DM Sans" font-size="10" fill="#0984e3" font-weight="600">☑ I'm not a robot</text>
+
+  <path d="M 160 100 Q 220 100 220 150" fill="none" stroke="#e17055" stroke-width="3" stroke-dasharray="4 4">
+    <animate attributeName="stroke-dashoffset" values="8;0" dur="0.5s" repeatCount="indefinite" linear/>
+  </path>
+  <rect x="190" y="135" width="60" height="30" rx="4" fill="#fde8e3" stroke="#e17055" stroke-width="2"/>
+  <text x="220" y="153" text-anchor="middle" font-family="DM Sans" font-size="10" fill="#e17055" font-weight="600">IP BANNED</text>
+</svg>`; }
+
+function svgRule() { return `
+<svg viewBox="0 0 300 200" width="100%" style="max-height:240px">
+  ${getDefs()}
+  <rect x="20" y="30" width="260" height="140" rx="8" fill="#1e1e24" stroke="#3a3a45" stroke-width="2"/>
+  <circle cx="35" cy="45" r="4" fill="#ff5f56"/>
+  <circle cx="50" cy="45" r="4" fill="#ffbd2e"/>
+  <circle cx="65" cy="45" r="4" fill="#27c93f"/>
+  
+  <text x="35" y="80" font-family="DM Mono" font-size="11" fill="#a29bfe">SecRule <tspan fill="#00b894">ARGS</tspan></text>
+  <text x="50" y="100" font-family="DM Mono" font-size="11" fill="#e17055">"@rx &lt;script&gt;"</text>
+  <text x="50" y="120" font-family="DM Mono" font-size="11" fill="#0984e3">"id:101, phase:2,</text>
+  <text x="55" y="140" font-family="DM Mono" font-size="11" fill="#ffbd2e" font-weight="600">deny, status:403"</text>
+
+  <rect x="20" y="70" width="260" height="15" fill="rgba(108,92,231,0.2)" opacity="0">
+    <animate attributeName="opacity" values="0; 1; 0" dur="3s" repeatCount="indefinite"/>
+  </rect>
+</svg>`; }
+
+function svgSummary() { return `
+<svg viewBox="0 0 300 175" width="100%" style="max-height:220px">
+  <defs>
+    <radialGradient id="glow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#00b894" stop-opacity="0.6"/>
+      <stop offset="100%" stop-color="#6c5ce7" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  
+  <circle cx="150" cy="85" r="70" fill="url(#glow)">
+    <animate attributeName="r" values="60; 100; 60" dur="4s" repeatCount="indefinite" ease-in-out/>
+    <animate attributeName="opacity" values="0.4; 0.8; 0.4" dur="4s" repeatCount="indefinite" ease-in-out/>
+  </circle>
+
+  <circle cx="150" cy="85" r="65" fill="none" stroke="#6c5ce7" stroke-width="2" stroke-dasharray="20 10 5 10">
+    <animateTransform attributeName="transform" type="rotate" values="0 150 85; 360 150 85" dur="12s" repeatCount="indefinite" linear/>
+  </circle>
+  <circle cx="150" cy="85" r="55" fill="none" stroke="#a29bfe" stroke-width="1" stroke-dasharray="4 4">
+    <animateTransform attributeName="transform" type="rotate" values="360 150 85; 0 150 85" dur="8s" repeatCount="indefinite" linear/>
+  </circle>
+
+  <path d="M 150 35 C 185 35 200 48 200 48 L 200 85 C 200 120 150 140 150 140 C 150 140 100 120 100 85 L 100 48 C 100 48 115 35 150 35 Z" fill="#1e1e24" stroke="#00b894" stroke-width="4"/>
+  
+  <path d="M 135 90 L 145 100 L 165 70" fill="none" stroke="#00b894" stroke-width="6" stroke-linecap="round" stroke-linejoin="round">
+    <animate attributeName="stroke-dasharray" values="0 100; 100 0" dur="2s" fill="freeze"/>
+  </path>
+</svg>`; }
+
+/* ─────────────────────────────────────
+   DATOS DE LA PRESENTACIÓN (WAF)
+   * 15 Diapositivas en total *
+───────────────────────────────────── */
+const SLIDES = [
+  {
+    type: 'title',
+    sidebarTitle: 'Inicio',
+    eyebrow: 'Seguridad | Tema 4.4.5',
+    h1: 'Web Application\nFirewalls (WAF)',
+    lead: 'Protegiendo la capa de aplicación contra ataques modernos.',
+    extraDesc: '<strong>Docente:</strong> L.I. Orquídea Acevedo Calderón <br> <strong>Materia:</strong> Tópicos Selectos de Programación Web',
+    chips: ['Capa 7 OSI', 'OWASP Top 10', 'ModSecurity', 'Cloud WAF', 'IPS/IDS'],
+    integrantes: ['Gutiérrez Sántiz', 'Jasso Jiménez', 'Juárez Guerra'],
+    svg: svgTitle,
+  },
+  {
+    sidebarTitle: 'Definición',
+    eyebrow: '01 — conceptos', h2: '1. ¿Qué es un WAF?',
+    lead: 'Idea clave: Un escudo especializado para el tráfico HTTP/HTTPS.',
+    extraDesc: '<strong>Función:</strong> Actúa como un proxy inverso, inspeccionando cada solicitud antes de que llegue al servidor web.',
+    items: [
+      { ico: '🌐', c: '#d1faf0', lbl: 'Capa de Aplicación', desc: 'Opera en la capa 7 del modelo OSI.<br>Analiza verbos HTTP, Headers y Payloads.' },
+    ],
+    exampleBox: 'Mientras un firewall de red bloquea puertos (ej: puerto 22), el WAF bloquea contenido malicioso en el puerto 80/443.',
+    svg: svgWafCycle,
+  },
+  {
+    sidebarTitle: 'WAF vs Firewall Tradicional',
+    eyebrow: '02 — arquitectura', h2: '2. WAF vs FW de Red',
+    lead: 'Idea clave: Diferentes capas, diferentes protecciones.',
+    extraDesc: '<strong>Limitación de red:</strong> Un Firewall de Red (L3/L4) deja pasar el tráfico del puerto 80 porque es "legítimo", ignorando si el contenido es un ataque.',
+    items: [
+      { ico: '🧱', c: '#fde8e3', lbl: 'Network Firewall', desc: 'Filtra por IP y Puerto (Capa 3 y 4). Ciego al código HTTP.' },
+      { ico: '🛡️', c: '#ede9fe', lbl: 'WAF', desc: 'Entiende la lógica de la aplicación. Inspecciona el contenido del paquete.' },
+    ],
+    exampleBox: 'Un atacante puede enviar un exploit SQLi por el puerto 80. El FW Tradicional lo dejará pasar, el WAF lo detendrá.',
+    svg: svgCompare,
+  },
+  {
+    sidebarTitle: 'Modelos de Seguridad',
+    eyebrow: '03 — modelos', h2: '3. Seguridad Positiva vs Negativa',
+    lead: 'Idea clave: ¿Bloqueamos lo malo o permitimos solo lo bueno?',
+    extraDesc: '<strong>Enfoque WAF:</strong> Los mejores WAF utilizan un modelo híbrido para maximizar la seguridad sin romper la funcionalidad de la app.',
+    items: [
+      { ico: '✅', c: '#d1faf0', lbl: 'Modelo Positivo (Allowlist)', desc: 'Asume que todo es malicioso. Solo permite tráfico que cumple estrictamente un formato predefinido.' },
+      { ico: '❌', c: '#fde8e3', lbl: 'Modelo Negativo (Blocklist)', desc: 'Permite todo el tráfico, excepto el que coincide con firmas de ataques conocidos.' },
+    ],
+    exampleBox: '<strong>Positivo:</strong> "El campo EDAD solo puede contener números del 1 al 99".',
+    svg: svgModels,
+  },
+  {
+    sidebarTitle: 'Protección OWASP',
+    eyebrow: '04 — amenazas', h2: '4. Mitigación de OWASP',
+    lead: 'Idea clave: El WAF es la primera línea contra los ataques más comunes.',
+    extraDesc: '<strong>Eficacia:</strong> Filtra patrones conocidos que buscan comprometer la base de datos o ejecutar código en el cliente.',
+    items: [
+      { ico: '🚫', c: '#dff0ff', lbl: 'Ataques bloqueados', desc: '• Inyección SQL (SQLi)<br>• Cross-Site Scripting (XSS)<br>• Inclusión de archivos (LFI/RFI)' },
+    ],
+    exampleBox: 'Si un atacante intenta enviar: <code style="color:var(--amber)">\' OR 1=1 --</code> en un formulario, el WAF descarta la petición.',
+    svg: svgSanitize,
+  },
+  {
+    sidebarTitle: 'Despliegue',
+    eyebrow: '05 — infraestructura', h2: '5. Modelos de Despliegue',
+    lead: 'Idea clave: ¿Dónde colocar nuestro guardián?',
+    extraDesc: '<strong>Opciones:</strong> Dependiendo de la infraestructura, puede ser una solución en la nube, un appliance o un módulo de software.',
+    items: [
+      { ico: '☁️', c: '#dff0ff', lbl: 'Cloud WAF', desc: 'Fácil de escalar (ej: Cloudflare). Protege antes de que el tráfico entre a tu red.' },
+      { ico: '🖥️', c: '#ede9fe', lbl: 'Host-based / Integrado', desc: 'Instalado directamente en el servidor web (ej: Nginx + ModSecurity).' },
+    ],
+    exampleBox: 'Para nuestra clase de programación web, configurar <strong>ModSecurity</strong> localmente es ideal para entender las reglas.',
+    svg: svgSurface,
+  },
+  {
+    sidebarTitle: 'Evasión de WAF (Bypass)',
+    eyebrow: '06 — técnicas avanzadas', h2: '6. Técnicas de Evasión',
+    lead: 'Idea clave: Los atacantes intentan "engañar" al analizador del WAF.',
+    extraDesc: '<strong>Cat y Ratón:</strong> Si el WAF solo busca la palabra "script", el atacante ofuscará la palabra para que el WAF no la lea, pero el navegador sí.',
+    items: [
+      { ico: '🎭', c: '#faeeda', lbl: 'Codificación (Encoding)', desc: 'Usar Hexadecimal o URL Encoding (ej: %3Cscript%3E en vez de &lt;script&gt;).' },
+      { ico: '🧩', c: '#ede9fe', lbl: 'Fragmentación HTTP', desc: 'Enviar el payload malicioso en pedazos muy pequeños para eludir la firma.' },
+    ],
+    exampleBox: 'Los WAF modernos deben <strong>decodificar</strong> automáticamente (URL, Base64) antes de evaluar las reglas.',
+    svg: svgBypass,
+  },
+  {
+    sidebarTitle: 'Respuesta Activa',
+    eyebrow: '07 — mitigación', h2: '7. Respuestas del WAF',
+    lead: 'Idea clave: No todo es un simple bloqueo. A veces se requiere verificación.',
+    extraDesc: '<strong>Acciones Dinámicas:</strong> Un WAF no solo responde con Error 403. Puede integrarse con técnicas de control anti-spam y ofuscación (Tema 4.4.1 y 4.4.2).',
+    items: [
+      { ico: '🚦', c: '#d1faf0', lbl: 'Rate Limiting', desc: 'Limita la cantidad de peticiones por segundo. Ideal contra Bots y DDoS.' },
+      { ico: '🧩', c: '#dff0ff', lbl: 'Desafío CAPTCHA', desc: 'Si el comportamiento es sospechoso, obliga al usuario a resolver un desafío.' },
+    ],
+    exampleBox: 'En lugar de bloquear una IP que parece hacer web scraping, el WAF redirige su tráfico a una validación reCAPTCHA.',
+    svg: svgAction,
+  },
+  {
+    sidebarTitle: 'Reglas (SecRules)',
+    eyebrow: '08 — anatomía', h2: '8. Anatomía de una Regla',
+    lead: 'Idea clave: ¿Cómo se escribe una instrucción para el WAF?',
+    extraDesc: '<strong>Sintaxis:</strong> Usando el estándar de ModSecurity (Core Rule Set), las reglas se componen de Variables, Operadores y Acciones.',
+    items: [
+      { ico: '⚙️', c: '#ede9fe', lbl: 'Variables', desc: '¿Qué revisamos? (ej: ARGS para parámetros POST/GET, REQUEST_HEADERS).' },
+      { ico: '⚡', c: '#fde8e3', lbl: 'Operador y Acción', desc: '¿Qué buscamos y qué hacemos? (ej: @rx busca regex, deny bloquea).' },
+    ],
+    exampleBox: '<code>SecRule ARGS "@rx &lt;script&gt;" "id:101,deny"</code><br>Esta línea bloquea cualquier argumento que contenga un script.',
+    svg: svgRule,
+  },
+  {
+    sidebarTitle: 'Detección',
+    eyebrow: '09 — lógica', h2: '9. Firmas vs. Comportamiento',
+    lead: 'Idea clave: Evolución desde diccionarios hasta Inteligencia Artificial.',
+    extraDesc: '<strong>Métodos:</strong> Las reglas pueden ser estáticas o dinámicas (basadas en IA).',
+    items: [
+      { ico: '📝', c: '#d1faf0', lbl: 'Basado en Firmas', desc: 'Busca patrones específicos de código malicioso conocido.' },
+      { ico: '🤖', c: '#faeeda', lbl: 'Machine Learning', desc: 'Aprende el tráfico "normal" de la aplicación y alerta ante desviaciones.' },
+    ],
+    exampleBox: 'Detección de <strong>Account Takeover</strong>: si un usuario "acierta" contraseñas a velocidad sobrehumana, el ML lo detiene.',
+    svg: svgAccessControl,
+  },
+  {
+    sidebarTitle: 'Inspección SSL',
+    eyebrow: '10 — cifrado', h2: '10. TLS/SSL Offloading',
+    lead: 'Idea clave: El WAF debe "ver" en texto claro para poder limpiar.',
+    extraDesc: '<strong>Reto HTTPS:</strong> Si el tráfico está cifrado de extremo a extremo, el WAF es ciego al contenido.',
+    items: [
+      { ico: '🔓', c: '#dff0ff', lbl: 'Terminación SSL', desc: 'El WAF aloja los certificados, descifra, inspecciona y vuelve a cifrar hacia el backend.' },
+    ],
+    exampleBox: 'Sin terminación SSL, un XSS viajaría oculto e indetectable por el túnel cifrado hasta el servidor.',
+    svg: svgCrypto,
+  },
+  {
+    sidebarTitle: 'Virtual Patching',
+    eyebrow: '11 — parches', h2: '11. Parcheo Virtual',
+    lead: 'Idea clave: Compra tiempo valioso para el equipo de desarrollo.',
+    extraDesc: '<strong>Ventaja crítica:</strong> Permite mitigar un fallo Zero-Day sin necesidad de tocar el código fuente inmediatamente.',
+    items: [
+      { ico: '🩹', c: '#d1faf0', lbl: 'Escudo temporal', desc: 'Se crea una regla de WAF específica que bloquea el intento de explotación del fallo descubierto.' },
+    ],
+    exampleBox: 'Durante la crisis de <strong>Log4j</strong>, se usó el parcheo virtual en WAFs para bloquear peticiones jndi:ldap en horas.',
+    svg: svgPatches,
+  },
+  {
+    sidebarTitle: 'Gestión de Cookies',
+    eyebrow: '12 — sesiones', h2: '12. Seguridad en Sesiones',
+    lead: 'Idea clave: Blindando identificadores (Temario 4.4.4).',
+    extraDesc: '<strong>Hardening automático:</strong> El WAF puede inyectar banderas de seguridad en las cookies de sesión si el código original lo omitió.',
+    items: [
+      { ico: '🍪', c: '#faeeda', lbl: 'HttpOnly y Secure', desc: 'Evita el robo por XSS y fuerza su transmisión solo por canales cifrados.' },
+    ],
+    exampleBox: 'El WAF reescribe la cabecera HTTP de salida: <code>Set-Cookie: ID=123; Secure; HttpOnly</code>.',
+    svg: svgSession,
+  },
+  {
+    sidebarTitle: 'Monitoreo',
+    eyebrow: '13 — visibilidad', h2: '13. Logs y Auditoría',
+    lead: 'Idea clave: Si no se mide, no se puede defender.',
+    extraDesc: '<strong>Visibilidad (Temario 4.4.3):</strong> Genera registros detallados de quién intentó atacar, desde dónde y qué técnica.',
+    items: [
+      { ico: '📊', c: '#ede9fe', lbl: 'Auditoría Forense', desc: 'Exportación de logs (Syslog, JSON) hacia sistemas SIEM para análisis de inteligencia.' },
+    ],
+    exampleBox: 'Mapas de calor en tiempo real: "Ataque DDoS bloqueado en capa 7 desde botnet global".',
+    svg: svgMonitor,
+  },
+  {
+    type: 'summary',
+    sidebarTitle: 'Conclusión',
+    eyebrow: 'resumen ejecutivo',
+    h2: '14. WAF: Un componente Vital',
+    lead: 'Idea clave: La seguridad web profunda ya no es opcional.',
+    extraDesc: '<strong>Reflexión final:</strong> Un WAF es poderoso, pero no es magia. Debe complementarse con prácticas de código seguro (Tema 4.3).',
+    quote: '👉 “El WAF no arregla el código vulnerable, pero compra el tiempo necesario para hacerlo seguro sin quedar expuestos.”',
+    svg: svgSummary,
+    sumCards: [
+      { ico: '🛡️', c: '#ede9fe', sc: '#6c5ce7', t: 'Capa 7', d: 'Inspección profunda de protocolo HTTP.' },
+      { ico: '🧱', c: '#d1faf0', sc: '#00b894', t: 'Vs Network', d: 'Detecta lo que el FW L4 ignora.' },
+      { ico: '🚫', c: '#fde8e3', sc: '#e17055', t: 'OWASP', d: 'Defensa contra SQLi, XSS y más.' },
+      { ico: '🧩', c: '#dff0ff', sc: '#0984e3', t: 'Dinámico', d: 'Despliegue de Captchas y Rate Limits.' },
+      { ico: '🩹', c: '#faeeda', sc: '#ba7517', t: 'Parcheo', d: 'Virtual Patching ante Zero-Days.' },
+      { ico: '🤖', c: '#d1faf0', sc: '#00b894', t: 'Inteligencia', d: 'Bloqueo inteligente y Auditoría.' },
+    ],
+  },
+];
+
+/* ─────────────────────────────────────
+   MOTOR DE RENDERIZADO 
+───────────────────────────────────── */
+let cur = 0;
+const stage   = document.getElementById('stage');
+const sidebar = document.getElementById('sidebar');
+const sid     = document.getElementById('sid');
+const prevB   = document.getElementById('prev');
+const nextB   = document.getElementById('next');
+
+const transitions = ['trans-slideX', 'trans-slideY', 'trans-shatter'];
+
+function buildSidebar() {
+  sidebar.innerHTML = '<div class="sidebar-title">TEMARIO</div>';
+  SLIDES.forEach((s, i) => {
+    const el = document.createElement('div');
+    el.className = 'sb-item' + (i === cur ? ' active' : '');
+    el.onclick = () => goTo(i);
+    el.innerHTML = `
+      <div class="sb-num">${String(i+1).padStart(2,'0')}</div>
+      <div class="sb-text">${s.sidebarTitle}</div>
+    `;
+    sidebar.appendChild(el);
+  });
+}
+
+function renderTitle(s) {
+  return `
+    <div class="eyebrow">${s.eyebrow}</div>
+    <div class="h1">${s.h1.replace('\n', '<br>')}</div>
+    <div class="accent-bar"></div>
+    <p class="lead">${s.lead}</p>
+    <div class="extra-info">${s.extraDesc}</div>
+    <div class="title-grid">
+      <div class="title-left">
+        <div class="chip-row">
+          ${s.chips.map((c, i) => `<span class="chip" style="animation-delay:${0.28 + i * 0.1}s">${c}</span>`).join('')}
+        </div>
+        <div style="margin-top:20px">${s.svg()}</div>
+      </div>
+      <div class="integrantes-card">
+        <div class="int-eyebrow">Equipo de trabajo</div>
+        ${s.integrantes.map(n => `<div class="int-item"><span class="int-dot"></span>${n}</div>`).join('')}
+      </div>
+    </div>
+  `;
+}
+
+function renderItems(s) {
+  return `
+    <div class="eyebrow">${s.eyebrow}</div>
+    <div class="h2">${s.h2}</div>
+    <p class="lead">${s.lead}</p>
+    <div class="extra-info">${s.extraDesc}</div>
+    <div class="two">
+      <div class="col-l">
+        ${s.items.map(it => `
+        <div class="item">
+          <div class="ico" style="background:${it.c}">${it.ico}</div>
+          <div>
+            <div class="lbl">${it.lbl}</div>
+            <div class="desc">${it.desc}</div>
+          </div>
+        </div>`).join('')}
+        ${s.exampleBox ? `<div class="example-box"><div class="example-title">💡 Ejemplo práctico</div><div>${s.exampleBox}</div></div>` : ''}
+      </div>
+      <div class="anim-box">${s.svg()}</div>
+    </div>
+  `;
+}
+
+function renderSummary(s) {
+  return `
+    <div class="eyebrow">${s.eyebrow}</div>
+    <div class="h2">${s.h2}</div>
+    <p class="lead">${s.lead}</p>
+    ${s.quote ? `<div class="example-box" style="border-left-color: var(--teal); margin-bottom: 16px;"><div class="example-title" style="color: var(--teal);">🎯 Conclusión</div><div style="font-size: 15px; font-weight: 500; font-style: italic;">${s.quote}</div></div>` : ''}
+    <div class="extra-info">${s.extraDesc}</div>
+    <div class="sum-grid">
+      ${s.sumCards.map((c, i) => `
+      <div class="sum-card" style="transition-delay:${i * 0.05}s">
+        <div class="sum-ico" style="background:${c.c}">${c.ico}</div>
+        <div class="sum-title" style="color:${c.sc}">${c.t}</div>
+        <div class="sum-desc">${c.d}</div>
+      </div>`).join('')}
+    </div>
+  `;
+}
+
+function goTo(n) {
+  const dir = n > cur ? 1 : -1;
+  const old = stage.lastElementChild;
+  if (old) {
+    old.classList.remove('active');
+    old.classList.add(dir > 0 ? 'out-next' : 'out-prev');
+    setTimeout(() => old.remove(), 600);
+  }
+  cur = n;
+  const s = SLIDES[cur];
+  const transClass = transitions[cur % transitions.length];
+  const newSlide = document.createElement('div');
+  newSlide.className = `slide ${transClass} ${dir > 0 ? 'init-next' : 'init-prev'}`;
+  
+  if (s.type === 'title') {
+    newSlide.style.justifyContent = 'center';
+    newSlide.innerHTML = renderTitle(s);
+  } else if (s.type === 'summary') {
+    newSlide.innerHTML = renderSummary(s);
+  } else {
+    newSlide.innerHTML = renderItems(s);
+  }
+
+  stage.appendChild(newSlide);
+  void newSlide.offsetWidth;
+  requestAnimationFrame(() => {
+    newSlide.classList.remove('init-next', 'init-prev');
+    newSlide.classList.add('active');
+  });
+  
+  setTimeout(() => {
+    newSlide.querySelectorAll('.item, .sum-card, .example-box').forEach((x, i) => {
+      setTimeout(() => x.classList.add('in'), i * 80 + 100);
+    });
+  }, 150);
+  
+  sid.textContent = String(cur + 1).padStart(2, '0') + ' / ' + SLIDES.length;
+  prevB.disabled = cur === 0;
+  nextB.disabled = cur === SLIDES.length - 1;
+  nextB.textContent = cur === SLIDES.length - 1 ? 'Fin ✓' : 'Siguiente →';
+  buildSidebar();
+}
+
+function nav(d) { goTo(Math.min(Math.max(cur + d, 0), SLIDES.length - 1)); }
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'ArrowRight' || e.key === ' ') { e.preventDefault(); nav(1); }
+  if (e.key === 'ArrowLeft') { e.preventDefault(); nav(-1); }
+});
+
+goTo(0);
+</script>
+</body>
+</html>
