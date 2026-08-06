@@ -25,8 +25,8 @@ document.addEventListener("DOMContentLoaded", () => {
     const diasJuntos    = document.getElementById("dias-juntos");
     const corazonFirmaWrapper = document.getElementById("corazon-firma-wrapper");
 
-    const PASS    = "luis";
-    const MENSAJE = "Desde que estás en mi vida, descubrí que mi lugar favorito es dondequiera que estemos juntos. Contigo, hasta lo más cotidiano se vuelve extraordinario y me hace sonreír sin darme cuenta. Eres mi refugio, mi mayor inspiración y la historia más bonita que el destino ha escrito para mí.";
+    const PASS    = "mari";
+    const MENSAJE = "Desde que estás en mi vida, descubrí que mi lugar favorito es dondequiera que estemos juntos. Contigo, hasta lo más cotidiano se vuelve extraordinario y me hace sonreír sin darme cuenta y bla bla bla (Mari AQUI VA LA CURSILERIA jajaja)";
 
     // 📅 Ajusta esta fecha a tu gusto
     const FECHA_INICIO = new Date("2024-06-09");
