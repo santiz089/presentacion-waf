@@ -121,17 +121,17 @@ generarPolvoCristal();
     setTimeout(escribirTitulo, 400);
 
     const PASS    = "mari";
-    const MENSAJE = "Desde que estás en mi vida, descubrí que mi lugar favorito es dondequiera que estemos juntos. Contigo, hasta lo más cotidiano se vuelve extraordinario y me hace sonreír sin darme cuenta y bla bla bla (Mari AQUI VA LA CURSILERIA jajaja)";
+    const MENSAJE = "Desde que estás en mi vida, descubrí que mi lugar favorito es dondequiera que estemos juntos. Contigo, hasta lo más cotidiano se vuelve extraordinario y me hace sonreír sin darme cuenta y bla bla bla (VAYA CURSILERIA jajaja)";
 
     // 📅 Ajusta esta fecha a tu gusto
-    const FECHA_INICIO = new Date("2024-06-09");
+    const FECHA_INICIO = new Date("2026-08-08");
 
     const RAZONES = [
         "Por tu risa que me desarma 🌹",
         "Por cada detalle que nadie más nota 🌹",
         "Por ser mi lugar favorito 🌹",
         "Por hacer extraordinario lo cotidiano 🌹",
-        "Por elegirme cada día 🌹",
+        "Por sorprenderme cada día 🌹",
         "Por ser mi historia favorita 🌹"
     ];
     let indiceRazon = 0;
@@ -488,7 +488,7 @@ generarPolvoCristal();
             setTimeout(() => {
                 huellaBox.classList.remove("escaneando");
                 huellaBox.classList.add("aprobado");
-                estadoLogin.textContent = "¡Acceso concedido, mi amor! ❤";
+                estadoLogin.textContent = "¡Acceso concedido, mari! ❤";
                 estadoLogin.style.color = "#22c55e";
 
                 setTimeout(() => {
